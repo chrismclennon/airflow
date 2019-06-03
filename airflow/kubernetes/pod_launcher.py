@@ -117,6 +117,10 @@ class PodLauncher(LoggingMixin):
         self.log.info(
             'Event: %s had an event of type %s',
             event.metadata.name, event.status.phase)
+        self.log.info('Event log for %s:', event.metadata.name)
+        events = self.read_pod_events(event)
+        for timestamp, message in events:
+            self.log.info('%s : %s', timestamp, message)
         status = self.process_status(event.metadata.name, event.status.phase)
         return status
 
@@ -163,6 +167,19 @@ class PodLauncher(LoggingMixin):
     def read_pod(self, pod):
         try:
             return self._client.read_namespaced_pod(pod.name, pod.namespace)
+        except BaseHTTPError as e:
+            raise AirflowException(
+                'There was an error reading the kubernetes API: {}'.format(e)
+            )
+
+    def read_pod_events(self, pod):
+        try:
+            events = self._client.list_namespaced_event(pod.namespace)
+            return [
+                    (event.metadata.creation_timestamp, event.message)
+                    for event in events.items 
+                    if event.metadata.name.startswith(pod.name)
+            ]
         except BaseHTTPError as e:
             raise AirflowException(
                 'There was an error reading the kubernetes API: {}'.format(e)

@@ -138,6 +138,7 @@ class PodLauncher(LoggingMixin):
                                   event.status.container_statuses)), None)
         return status.state.running is not None
 
+    # TODO (mclennon): docstring
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_exponential(),

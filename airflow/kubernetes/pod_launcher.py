@@ -141,6 +141,24 @@ class PodLauncher(LoggingMixin):
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_exponential(),
+    def read_pod_events(self, pod):
+        try:
+            events = self._client.list_namespaced_event(pod.namespace)
+            pod_events = [
+                    (event.metadata.creation_timestamp, event.message)
+                    for event in events.items 
+                    if event.metadata.name.startswith(pod.name)
+            ]
+            pod_events.sort(key=lambda x: x[0])
+            return pod_events
+        except BaseHTTPError as e:
+            raise AirflowException(
+                'There was an error reading the kubernetes API: {}'.format(e)
+            )
+
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_exponential(),
         reraise=True
     )
     def read_pod_logs(self, pod):
@@ -167,25 +185,6 @@ class PodLauncher(LoggingMixin):
     def read_pod(self, pod):
         try:
             return self._client.read_namespaced_pod(pod.name, pod.namespace)
-        except BaseHTTPError as e:
-            raise AirflowException(
-                'There was an error reading the kubernetes API: {}'.format(e)
-            )
-
-    # TODO (mclennon)
-    @tenacity.retry(
-        stop=tenacity.stop_after_attempt(3),
-        wait=tenacity.wait_exponential(),
-    def read_pod_events(self, pod):
-        try:
-            events = self._client.list_namespaced_event(pod.namespace)
-            pod_events = [
-                    (event.metadata.creation_timestamp, event.message)
-                    for event in events.items 
-                    if event.metadata.name.startswith(pod.name)
-            ]
-            pod_events.sort(key=lambda x: x[0])
-            return pod_events
         except BaseHTTPError as e:
             raise AirflowException(
                 'There was an error reading the kubernetes API: {}'.format(e)

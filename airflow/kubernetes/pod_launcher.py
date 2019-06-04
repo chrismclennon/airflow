@@ -138,7 +138,6 @@ class PodLauncher(LoggingMixin):
                                   event.status.container_statuses)), None)
         return status.state.running is not None
 
-    # TODO (mclennon): docstring
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_exponential(),
@@ -147,7 +146,7 @@ class PodLauncher(LoggingMixin):
             events = self._client.list_namespaced_event(pod.namespace)
             pod_events = [
                     (event.metadata.creation_timestamp, event.message)
-                    for event in events.items 
+                    for event in events.items
                     if event.metadata.name.startswith(pod.name)
             ]
             pod_events.sort(key=lambda x: x[0])
